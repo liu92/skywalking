@@ -18,8 +18,10 @@
 
 package org.apache.skywalking.oap.server.cluster.plugin.nacos;
 
+import com.alibaba.nacos.api.PropertyKeyConst;
 import com.alibaba.nacos.api.naming.NamingFactory;
 import com.alibaba.nacos.api.naming.NamingService;
+import java.util.Properties;
 import org.apache.skywalking.oap.server.core.CoreModule;
 import org.apache.skywalking.oap.server.core.cluster.ClusterModule;
 import org.apache.skywalking.oap.server.library.module.ModuleConfig;
@@ -32,14 +34,12 @@ import org.powermock.core.classloader.annotations.PowerMockIgnore;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
 import org.powermock.reflect.Whitebox;
+
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
 
-/**
- * @author caoyixiong
- */
 @RunWith(PowerMockRunner.class)
 @PrepareForTest(NamingFactory.class)
 @PowerMockIgnore("javax.management.*")
@@ -58,7 +58,6 @@ public class ClusterModuleNacosProviderTest {
     public void module() {
         assertEquals(ClusterModule.class, provider.module());
     }
-
 
     @Test
     public void createConfigBeanIfAbsent() {
@@ -79,13 +78,17 @@ public class ClusterModuleNacosProviderTest {
         nacosConfig.setServiceName(SERVICE_NAME);
         Whitebox.setInternalState(provider, "config", nacosConfig);
         NamingService namingService = mock(NamingService.class);
-        PowerMockito.when(NamingFactory.createNamingService("10.0.0.1:1000,10.0.0.2:1001")).thenReturn(namingService);
+
+        Properties properties = new Properties();
+        properties.put(PropertyKeyConst.SERVER_ADDR, "10.0.0.1:1000,10.0.0.2:1001");
+
+        PowerMockito.when(NamingFactory.createNamingService(properties)).thenReturn(namingService);
         provider.prepare();
-        ArgumentCaptor<String> addressCaptor = ArgumentCaptor.forClass(String.class);
+        ArgumentCaptor<Properties> addressCaptor = ArgumentCaptor.forClass(Properties.class);
         PowerMockito.verifyStatic();
         NamingFactory.createNamingService(addressCaptor.capture());
-        String data = addressCaptor.getValue();
-        assertEquals("10.0.0.1:1000,10.0.0.2:1001", data);
+        Properties data = addressCaptor.getValue();
+        assertEquals("10.0.0.1:1000,10.0.0.2:1001", data.getProperty(PropertyKeyConst.SERVER_ADDR));
     }
 
     @Test
@@ -101,6 +104,6 @@ public class ClusterModuleNacosProviderTest {
     @Test
     public void requiredModules() {
         String[] modules = provider.requiredModules();
-        assertArrayEquals(new String[]{CoreModule.NAME}, modules);
+        assertArrayEquals(new String[] {CoreModule.NAME}, modules);
     }
 }

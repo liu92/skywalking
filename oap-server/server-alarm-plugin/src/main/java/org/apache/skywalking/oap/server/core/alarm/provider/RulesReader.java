@@ -18,14 +18,19 @@
 
 package org.apache.skywalking.oap.server.core.alarm.provider;
 
-import java.io.*;
-import java.util.*;
+import java.io.InputStream;
+import java.io.Reader;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import org.apache.skywalking.oap.server.core.alarm.provider.grpc.GRPCAlarmSetting;
+import org.apache.skywalking.oap.server.core.alarm.provider.slack.SlackSettings;
+import org.apache.skywalking.oap.server.core.alarm.provider.wechat.WechatSettings;
 import org.yaml.snakeyaml.Yaml;
 
 /**
  * Rule Reader parses the given `alarm-settings.yml` config file, to the target {@link Rules}.
- *
- * @author wusheng
  */
 public class RulesReader {
     private Map yamlData;
@@ -44,41 +49,93 @@ public class RulesReader {
         Rules rules = new Rules();
 
         if (Objects.nonNull(yamlData)) {
-            Map rulesData = (Map)yamlData.get("rules");
+            Map rulesData = (Map) yamlData.get("rules");
             if (rulesData != null) {
                 rules.setRules(new ArrayList<>());
                 rulesData.forEach((k, v) -> {
-                    if (((String)k).endsWith("_rule")) {
+                    if (((String) k).endsWith("_rule")) {
                         AlarmRule alarmRule = new AlarmRule();
-                        alarmRule.setAlarmRuleName((String)k);
-                        Map settings = (Map)v;
+                        alarmRule.setAlarmRuleName((String) k);
+                        Map settings = (Map) v;
                         Object metricsName = settings.get("metrics-name");
                         if (metricsName == null) {
                             throw new IllegalArgumentException("metrics-name can't be null");
                         }
 
-                        alarmRule.setMetricsName((String)metricsName);
-                        alarmRule.setIncludeNames((ArrayList)settings.getOrDefault("include-names", new ArrayList(0)));
+                        alarmRule.setMetricsName((String) metricsName);
+                        alarmRule.setIncludeNames((ArrayList) settings.getOrDefault("include-names", new ArrayList(0)));
+                        alarmRule.setExcludeNames((ArrayList) settings.getOrDefault("exclude-names", new ArrayList(0)));
+                        alarmRule.setIncludeNamesRegex((String) settings.getOrDefault("include-names-regex", ""));
+                        alarmRule.setExcludeNamesRegex((String) settings.getOrDefault("exclude-names-regex", ""));
+                        alarmRule.setIncludeLabels(
+                            (ArrayList) settings.getOrDefault("include-labels", new ArrayList(0)));
+                        alarmRule.setExcludeLabels(
+                            (ArrayList) settings.getOrDefault("exclude-labels", new ArrayList(0)));
+                        alarmRule.setIncludeLabelsRegex((String) settings.getOrDefault("include-labels-regex", ""));
+                        alarmRule.setExcludeLabelsRegex((String) settings.getOrDefault("exclude-labels-regex", ""));
                         alarmRule.setThreshold(settings.get("threshold").toString());
-                        alarmRule.setOp((String)settings.get("op"));
-                        alarmRule.setPeriod((Integer)settings.getOrDefault("period", 1));
-                        alarmRule.setCount((Integer)settings.getOrDefault("count", 1));
-                        alarmRule.setSilencePeriod((Integer)settings.getOrDefault("silence-period", -1));
-                        alarmRule.setMessage((String)settings.getOrDefault("message", "Alarm caused by Rule " + alarmRule.getAlarmRuleName()));
+                        alarmRule.setOp((String) settings.get("op"));
+                        alarmRule.setPeriod((Integer) settings.getOrDefault("period", 1));
+                        alarmRule.setCount((Integer) settings.getOrDefault("count", 1));
+                        // How many times of checks, the alarm keeps silence after alarm triggered, default as same as period.
+                        alarmRule.setSilencePeriod((Integer) settings.getOrDefault("silence-period", alarmRule.getPeriod()));
+                        alarmRule.setMessage(
+                            (String) settings.getOrDefault("message", "Alarm caused by Rule " + alarmRule
+                                .getAlarmRuleName()));
 
                         rules.getRules().add(alarmRule);
                     }
                 });
             }
-            List webhooks = (List)yamlData.get("webhooks");
+            List webhooks = (List) yamlData.get("webhooks");
             if (webhooks != null) {
                 rules.setWebhooks(new ArrayList<>());
                 webhooks.forEach(url -> {
-                    rules.getWebhooks().add((String)url);
+                    rules.getWebhooks().add((String) url);
                 });
             }
-        }
 
+            Map grpchooks = (Map) yamlData.get("gRPCHook");
+            if (grpchooks != null) {
+                GRPCAlarmSetting grpcAlarmSetting = new GRPCAlarmSetting();
+                Object targetHost = grpchooks.get("target_host");
+                if (targetHost != null) {
+                    grpcAlarmSetting.setTargetHost((String) targetHost);
+                }
+
+                Object targetPort = grpchooks.get("target_port");
+                if (targetPort != null) {
+                    grpcAlarmSetting.setTargetPort((Integer) targetPort);
+                }
+
+                rules.setGrpchookSetting(grpcAlarmSetting);
+            }
+
+            Map slacks = (Map) yamlData.get("slackHooks");
+            if (slacks != null) {
+                SlackSettings slackSettings = new SlackSettings();
+                Object textTemplate = slacks.getOrDefault("textTemplate", "");
+                slackSettings.setTextTemplate((String) textTemplate);
+
+                List<String> slackWebhooks = (List<String>) slacks.get("webhooks");
+                if (slackWebhooks != null) {
+                    slackSettings.getWebhooks().addAll(slackWebhooks);
+                }
+                rules.setSlacks(slackSettings);
+            }
+
+            Map wechatConfig = (Map) yamlData.get("wechatHooks");
+            if (wechatConfig != null) {
+                WechatSettings wechatSettings = new WechatSettings();
+                Object textTemplate = wechatConfig.getOrDefault("textTemplate", "");
+                wechatSettings.setTextTemplate((String) textTemplate);
+                List<String> wechatWebhooks = (List<String>) wechatConfig.get("webhooks");
+                if (wechatWebhooks != null) {
+                    wechatSettings.getWebhooks().addAll(wechatWebhooks);
+                }
+                rules.setWecchats(wechatSettings);
+            }
+        }
         return rules;
     }
 }
