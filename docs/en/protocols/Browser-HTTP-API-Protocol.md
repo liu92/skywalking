@@ -37,13 +37,11 @@ Input:
 
 OutPut:
 
-```json
-
-```
+Http Status: 204
 
 ## Error Log Report
 
-Detail information about data format can be found in [BrowserPerf.proto](https://github.com/apache/skywalking-data-collect-protocol/blob/master/Browser/BrowserPerf.proto).
+Detail information about data format can be found in [BrowserPerf.proto](https://github.com/apache/skywalking-data-collect-protocol/blob/master/browser/BrowserPerf.proto).
 
 ### POST http://localhost:12800/browser/errorLogs
 
@@ -80,6 +78,10 @@ Input:
 ]
 ```
 
+OutPut:
+
+Http Status: 204
+
 ### POST http://localhost:12800/browser/errorLog
 
 Send a single error log object with JSON format.
@@ -103,6 +105,4 @@ Input:
 
 OutPut:
 
-```json
-
-```
+Http Status: 204

@@ -125,6 +125,14 @@ public class CoreModuleConfig extends ModuleConfig {
     @Setter
     @Getter
     private String searchableTracesTags = DEFAULT_SEARCHABLE_TAG_KEYS;
+    /**
+     * Define the set of logs tag keys, which should be searchable through the GraphQL.
+     *
+     * @since 8.4.0
+     */
+    @Setter
+    @Getter
+    private String searchableLogsTags = "";
 
     public CoreModuleConfig() {
         this.downsampling = new ArrayList<>();
@@ -149,7 +157,16 @@ public class CoreModuleConfig extends ModuleConfig {
          * Aggregator mode OAP receives data from {@link #Mixed} and {@link #Aggregator} OAP nodes, and do 2nd round
          * aggregation. Then save the final result to the storage.
          */
-        Aggregator
+        Aggregator;
+
+        public static Role fromName(String name) {
+            for (Role role : Role.values()) {
+                if (role.name().equalsIgnoreCase(name)) {
+                    return role;
+                }
+            }
+            return Mixed;
+        }
     }
 
     /**
